@@ -158,7 +158,7 @@ EMIT CHANGES;
 |2                 |2                 |sensor 2          |2000              |
 ----
 +
-Evething ok?, create new stream/topic enrich
+Everything ok?, create new stream/topic enrich
 +
 [source,sql]
 ----
@@ -218,7 +218,7 @@ We are going to create two sinks connections to mysql database:
 +
 `insert` : insert all the readings in a table
 +
-`upsert`: update the last reading of each sensor
+`upsert`: insert or update the last reading of each sensor
 +
 Here some commads:
 +
@@ -295,7 +295,7 @@ CREATE SINK CONNECTOR IF NOT EXISTS "mysql-upsertA-sink"  WITH (
 NOTES:
 - Name of columns are case sensitive. 
 
-Things to customise for your environment:
+Things to customize for your environment:
 
 `topics` :  the source topic(s) you want to send
 
@@ -311,11 +311,66 @@ Things to customise for your environment:
 
 `transforms` : use transforms to add or delete columns
 
+4. Create the Source connectors.
++ 
+From a CDC sql server 
++
+[source,sql]
+----
+CREATE SINK CONNECTOR IF NOT EXISTS "mysql-upsertA-sink"  WITH (
+  "database.encrypt": "false",
+  "schema.history.internal.kafka.bootstrap.servers": "br-1:9092",
+  "schema.history.internal.kafka.topic": "schema-changes.AGP_UCA_BoardingPassData",
+  "connector.class": "io.debezium.connector.sqlserver.SqlServerConnector",
+  "tasks.max": "1",
+  "topic.prefix": "AGP_UCA_BoardingPassData",
+  "database.names": "RealTimeStatsCollectionDB",
+  "database.hostname": "xxx.xxx.xxx.xxx",
+  "database.port": "1433",
+  "database.user": "user",
+  "database.password": "************************************",
+  "snapshot.mode": "schema_only",
+  "table.include.list": "dbo.BoardingPassData"
+);
+----
++
+[source,sql]
+----
+CREATE STREAM STREAM_AGP_BOARDING WITH ( KAFKA_TOPIC='AGP_UCA_BoardingPassData.RealTimeStatsCollectionDB.dbo.BoardingPassData',VALUE_FORMAT='AVRO');
+----
++
+Podemos crearlos con format json por ejemplo:
++
+CREATE STREAM students_stream (id VARCHAR, name VARCHAR, address VARCHAR, city VARCHAR) WITH (kafka_topic='students', value_format='JSON');
++
+Importante el stream creado en ksql no interacciona con el original, se le puede definir el formato de salida (avro, json,etc)
++
+Ejemplos
+  ROWKEY ROWKEY,
+  BRFL.AFTER->BOARDINGPASSID BOARDINGPASSID,
+  BD.AFTER->ID ID_BOARD,
+  CONVERT_TZ(FROM_UNIXTIME(BD.AFTER->LASTSCANTIME), 'UTC', 'UTC') TIME,
+  TRIM(BD.AFTER->ORIGIN) ORIGIN,
+  TRIM(BD.AFTER->DESTINATION) DESTINATION,
+  SUBSTRING(BD.AFTER->WORKSTATIONNAME, 6, 2) TIPOLECTORA,
+  SUBSTRING(BD.AFTER->WORKSTATIONNAME, 8, 3) IDLECTORA,
+  SUBSTRING(BD.AFTER->WORKSTATIONNAME, 4, 2) TERMINAL,
+  TRIM(BD.AFTER->WORKSTATIONNAME) WORKSTATIONNAME,
+  REPLACE(TRIM(REPLACE(BD.AFTER->SEATNUMBER, '0', ' ')), ' ', '0') SEATNUMBER,
+  TRIM(BD.AFTER->PNRCODE) PNRCODE,
+  TRIM(BD.AFTER->COMPARTMENT) COMPARTMENT,
+  TRIM(BD.AFTER->NUMBEROFSEGMENTS) NUMBEROFSEGMENTS,
+  TRIM(BD.AFTER->ETICKETINDICATOR) ETICKETINDICATOR,
+  TRIM(BD.AFTER->PASSENGERHASH) PASSENGERHASH,
+  (CASE WHEN (SUBSTRING(BD.AFTER->WORKSTATIONNAME, 6, 2) = 'KB') THEN 1 ELSE 0 END) AK,
+  (CASE WHEN (SUBSTRING(BD.AFTER->WORKSTATIONNAME, 6, 2) = 'CK') THEN 1 ELSE 0 END) CK,
+  (CASE WHEN (SUBSTRING(BD.AFTER->WORKSTATIONNAME, 6, 2) = 'GT') THEN 1 ELSE 0 END) GT,
+
 
 '''
 
 References
-
+* https://github.com/confluentinc/demo-scene/blob/master/kafka-to-database/README.adoc
 * https://rmoff.dev/crunch19-zero-to-hero-kafka-connect[From Zero to Hero with Kafka Connect]
 * https://hub.confluent.io[Confluent Hub]
 * https://docs.confluent.io/current/connect/kafka-connect-jdbc/sink-connector/index.html[JDBC Sink connector docs]
