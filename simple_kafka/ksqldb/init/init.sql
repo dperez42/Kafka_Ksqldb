@@ -35,7 +35,7 @@ CREATE SINK CONNECTOR IF NOT EXISTS "mysql-insert-sink"  WITH (
     "connection.url"= 'jdbc:mysql://mysql:3306/temp_db',
     "connection.user"= 'myuser',
     "connection.password"= 'mypassword',
-    "topics"= 'T1_T2',
+    "topics"= 'reading_enrich',
     "connector.class"= 'io.confluent.connect.jdbc.JdbcSinkConnector',
     "key.converter"='org.apache.kafka.connect.storage.StringConverter',
     "value.converter"='io.confluent.connect.avro.AvroConverter',
