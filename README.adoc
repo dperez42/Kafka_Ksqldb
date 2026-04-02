@@ -148,7 +148,7 @@ Topic printing ceased
 Try with a new incoming reading from sensor 2.
 
 [source,sql]
----
+----
 INSERT INTO readings (KEY_COL, id_sensor, value) VALUES ('4',2,9999);
 ----
 
@@ -205,263 +205,60 @@ CREATE SINK CONNECTOR IF NOT EXISTS "mysql-insert-sink"  WITH (
     "transforms.addSome.type"='org.apache.kafka.connect.transforms.InsertField$Value',
     "transforms.addSome.partition.field"= '_partition',
     "transforms.addSome.timestamp.field"= '_record_TS_UTC'
+    -- add static values column:
+    "transforms.addSome.static.field"= 'source',
+    "transforms.addSome.static.value"= 'reading_enrich'
 );
 ----
 
+And upsert sink type:
 
-
-
-+
-[source,javascript]
+[source,sql]
 ----
-curl -X PUT http://localhost:8083/connectors/sink-jdbc-mysql-01/config \
-     -H "Content-Type: application/json" -d '{
-    "connector.class"                    : "io.confluent.connect.jdbc.JdbcSinkConnector",
-    "connection.url"                     : "jdbc:mysql://mysql:3306/demo",
-    "topics"                             : "test01",
-    "key.converter"                      : "org.apache.kafka.connect.storage.StringConverter",
-    "value.converter"                    : "io.confluent.connect.avro.AvroConverter",
-    "value.converter.schema.registry.url": "http://schema-registry:8081",
-    "connection.user"                    : "connect_user",
-    "connection.password"                : "asgard",
-    "auto.create"                        : true,
-    "auto.evolve"                        : true,
-    "insert.mode"                        : "insert",
-    "pk.mode"                            : "record_key",
-    "pk.fields"                          : "MESSAGE_KEY"
-}'
+CREATE SINK CONNECTOR IF NOT EXISTS "mysql-upsertA-sink"  WITH (
+    "task.max"='1',
+    "connection.url"= 'jdbc:mysql://mysql:3306/temp_db',
+    "connection.user"= 'myuser',
+    "connection.password"= 'mypassword',
+    "topics"= 'reading_enrich',
+    "connector.class"= 'io.confluent.connect.jdbc.JdbcSinkConnector',
+    "key.converter"='org.apache.kafka.connect.storage.StringConverter',
+    "value.converter"='io.confluent.connect.avro.AvroConverter',
+    "value.converter.schema.registry.url"='http://schema-registry:8081',
+    "table.name.format"= 'kafka_upsertA_${topic}',
+    "auto.create"= 'true',
+    "auto.evolve"= 'true',
+    -- set index 
+    "insert.mode"= 'upsert',
+    "pk.mode"='record_value',
+    "pk.fields"='ID', 
+    -- Añade o quita columnas 
+    "transforms"= 'dropSome,addSome',
+    "transforms.dropSome.type"='org.apache.kafka.connect.transforms.ReplaceField$Value',
+    --"transforms.dropSome.blacklist"= 'COL2',
+    "transforms.addSome.type"='org.apache.kafka.connect.transforms.InsertField$Value',
+    "transforms.addSome.partition.field"= '_partition',
+    "transforms.addSome.timestamp.field"= 'RECORD_TS',
+    -- add static values column:
+    "transforms.addSome.static.field"= 'source',
+    "transforms.addSome.static.value"= 'reading_enrich'
+);
 ----
+
+NOTE:
+- Name of columns are case sensitive. 
+
 +
 Things to customise for your environment:
 +
-* `topics` :  the source topic(s) you want to send to S3
+* `topics` :  the source topic(s) you want to send
 * `key.converter` : match the serialisation of your source data (see https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/[here])
 * `value.converter` : match the serialisation of your source data (see https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/[here])
+* `insert.mode` : insert or upsert.
+* `pk.mode` : record_value (use the value) or record_key (use the key)
+* `pk.fields` : columns (could be various) to use as index. Is case sensitive!.
+* `transforms` : use transforms to add or delete columns
 +
-Check data in target db
-+
-[source,bash]
-----
-docker exec -it mysql bash -c 'mysql -u root -p$MYSQL_ROOT_PASSWORD demo'
-----
-+
-[source,sql]
-----
-mysql> SHOW TABLES;
-+----------------+
-| Tables_in_demo |
-+----------------+
-| test01         |
-+----------------+
-1 row in set (0.00 sec)
-
-mysql> SELECT * FROM test01;
-+------+------+-------------+
-| COL1 | COL2 | MESSAGE_KEY |
-+------+------+-------------+
-|    1 | FOO  | X           |
-|    2 | BAR  | Y           |
-+------+------+-------------+
-2 rows in set (0.00 sec)
-----
-
-
-4. Insert some more data. Notice what happens if you re-use a key. 
-+
-[source,sql]
-----
-INSERT INTO TEST01 (KEY_COL, COL1, COL2) VALUES ('Z',1,'WOO');
-INSERT INTO TEST01 (KEY_COL, COL1, COL2) VALUES ('Y',4,'PFF');
-----
-+
-The Kafka Connect tasks status shows that there's a duplicate key error
-+
-[source,bash]
-----
-$ curl -s http://localhost:8083/connectors/sink-jdbc-mysql-01/tasks/0/status | jq '.'
-{
-  "id": 0,
-  "state": "FAILED",
-  "worker_id": "kafka-connect:8083",
-  "trace": "org.apache.kafka.connect.errors.ConnectException: Exiting WorkerSinkTask due to unrecoverable exception.\n\tat org.apache.kafka.connect.runtime.WorkerSinkTask.deliverMessages(WorkerSinkTask.java:614)\n\tat org.apache.kafka.connect.runtime.WorkerSinkTask.poll(WorkerSinkTask.java:329)\n\tat org.apache.kafka.connect.runtime.WorkerSinkTask.iteration(WorkerSinkTask.java:232)\n\tat org.apache.kafka.connect.runtime.WorkerSinkTask.execute(WorkerSinkTask.java:201)\n\tat org.apache.kafka.connect.runtime.WorkerTask.doRun(WorkerTask.java:185)\n\tat org.apache.kafka.connect.runtime.WorkerTask.run(WorkerTask.java:234)\n\tat java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)\n\tat java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)\n\tat java.base/java.lang.Thread.run(Thread.java:834)\nCaused by: org.apache.kafka.connect.errors.ConnectException: java.sql.SQLException: Exception chain:\njava.sql.BatchUpdateException: Duplicate entry 'Y' for key 'test01.PRIMARY'\njava.sql.SQLIntegrityConstraintViolationException: Duplicate entry 'Y' for key 'test01.PRIMARY'\n\n\tat io.confluent.connect.jdbc.sink.JdbcSinkTask.put(JdbcSinkTask.java:89)\n\tat org.apache.kafka.connect.runtime.WorkerSinkTask.deliverMessages(WorkerSinkTask.java:586)\n\t... 10 more\nCaused by: java.sql.SQLException: Exception chain:\njava.sql.BatchUpdateException: Duplicate entry 'Y' for key 'test01.PRIMARY'\njava.sql.SQLIntegrityConstraintViolationException: Duplicate entry 'Y' for key 'test01.PRIMARY'\n\n\tat io.confluent.connect.jdbc.sink.JdbcSinkTask.put(JdbcSinkTask.java:86)\n\t... 11 more\n"
-}
-----
-
-5. Update the Sink connector to use `UPSERT` mode
-+
-[source,javascript]
-----
-curl -X PUT http://localhost:8083/connectors/sink-jdbc-mysql-01/config \
-     -H "Content-Type: application/json" -d '{
-    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
-    "connection.url": "jdbc:mysql://mysql:3306/demo",
-    "topics": "test01",
-    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
-    "connection.user": "connect_user",
-    "connection.password": "asgard",
-    "auto.create": true,
-    "auto.evolve": true,
-    "insert.mode": "upsert",
-    "pk.mode": "record_key",
-    "pk.fields": "MESSAGE_KEY"
-}'
-----
-+
-Now the row for key `Y` updates, whilst `Z` is added:
-+
-[source,sql]
-----
-mysql> SELECT * FROM test01;
-+------+------+-------------+
-| COL1 | COL2 | MESSAGE_KEY |
-+------+------+-------------+
-|    1 | FOO  | X           |
-|    4 | PFF  | Y           |
-|    1 | WOO  | Z           |
-+------+------+-------------+
-3 rows in set (0.00 sec)
-----
-
-6. Drop fields, add fields - note how the target schema evolves in-place
-+
-[source,javascript]
-----
-# Drop the existing connector
-curl -X DELETE http://localhost:8083/connectors/sink-jdbc-mysql-01
-
-# Create a new one, reading from the same topic with new config
-# Because it's got a new name, the connector will re-read all the messages
-# from the topic. 
-curl -X PUT http://localhost:8083/connectors/sink-jdbc-mysql-02/config \
-     -H "Content-Type: application/json" -d '{
-    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
-    "connection.url": "jdbc:mysql://mysql:3306/demo",
-    "topics": "test01",
-    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
-    "connection.user": "connect_user",
-    "connection.password": "asgard",
-    "auto.create": true,
-    "auto.evolve": true,
-    "insert.mode": "upsert",
-    "pk.mode": "record_key",
-    "pk.fields": "MESSAGE_KEY",
-    "transforms": "dropSome,addSome",
-    "transforms.dropSome.type": "org.apache.kafka.connect.transforms.ReplaceField$Value",
-    "transforms.dropSome.blacklist": "COL2",
-    "transforms.addSome.type":"org.apache.kafka.connect.transforms.InsertField$Value",
-    "transforms.addSome.partition.field": "_partition",
-    "transforms.addSome.timestamp.field" : "RECORD_TS"
-}'
-----
-+
-[source,sql]
-----
-mysql> describe test01;
-+-------------+--------------+------+-----+---------+-------+
-| Field       | Type         | Null | Key | Default | Extra |
-+-------------+--------------+------+-----+---------+-------+
-| COL1        | int          | YES  |     | NULL    |       |
-| COL2        | varchar(256) | YES  |     | NULL    |       |
-| MESSAGE_KEY | varchar(256) | NO   | PRI | NULL    |       |
-| _partition  | int          | YES  |     | NULL    |       |
-| RECORD_TS   | datetime(3)  | YES  |     | NULL    |       |
-+-------------+--------------+------+-----+---------+-------+
-5 rows in set (0.00 sec)
-
-mysql> select * from test01;
-+------+------+-------------+------------+-------------------------+
-| COL1 | COL2 | MESSAGE_KEY | _partition | RECORD_TS               |
-+------+------+-------------+------------+-------------------------+
-|    1 | FOO  | X           |          0 | 2021-03-11 11:50:00.759 |
-|    4 | PFF  | Y           |          0 | 2021-03-11 11:50:47.761 |
-|    1 | WOO  | Z           |          0 | 2021-03-11 11:50:47.682 |
-+------+------+-------------+------------+-------------------------+
-3 rows in set (0.00 sec)
-----
-
-
-7. Write some CSV and JSON to new topics
-+
-[source,bash]
-----
-docker exec -i kafkacat kafkacat \
-        -b broker:29092 -P \
-        -t some_json_data <<EOF
-{ "ID": 1, "Artist": "Rick Astley", "Song": "Never Gonna Give You Up" }        
-{ "ID": 2, "Artist": "asdfasd", "Song": "dsfjfghg" }        
-EOF
-
-docker exec -i kafkacat kafkacat \
-        -b broker:29092 -P \
-        -t some_json_data_with_a_schema <<EOF
-{ "schema": { "type": "struct", "optional": false, "version": 1, "fields": [ { "field": "ID", "type": "string", "optional": true }, { "field": "Artist", "type": "string", "optional": true }, { "field": "Song", "type": "string", "optional": true } ] }, "payload": { "ID": "1", "Artist": "Rick Astley", "Song": "Never Gonna Give You Up" } }
-EOF
-
-docker exec -i kafkacat kafkacat \
-        -b broker:29092 -P \
-        -t some_csv_data <<EOF
-1,Rick Astley,Never Gonna Give You Up
-EOF
-----
-
-8. Stream the JSON data that has a schema to DB: 
-+
-[source,bash]
-----
-curl -X PUT http://localhost:8083/connectors/sink-jdbc-mysql-02-json/config \
-     -H "Content-Type: application/json" -d '{
-    "connector.class"               : "io.confluent.connect.jdbc.JdbcSinkConnector",
-    "connection.url"                : "jdbc:mysql://mysql:3306/demo",
-    "topics"                        : "some_json_data_with_a_schema",
-    "key.converter"                 : "org.apache.kafka.connect.storage.StringConverter",
-    "value.converter"               : "org.apache.kafka.connect.json.JsonConverter",
-    "value.converter.schemas.enable": "true",
-    "connection.user"               : "connect_user",
-    "connection.password"           : "asgard",
-    "auto.create"                   : true,
-    "auto.evolve"                   : true,
-    "insert.mode"                   : "insert"
-}'
-----
-
-9. Use ksqlDB to apply a schema to the CSV and schemaless-JSON, and show off `INSERT INTO` for merging two topics into one with a common schema
-+
-[source,sql]
-----
-CREATE STREAM SOME_JSON (ID INT, ARTIST VARCHAR, SONG VARCHAR) 
-  WITH (KAFKA_TOPIC='some_json_data', VALUE_FORMAT='JSON');
-
-SET 'auto.offset.reset' = 'earliest';
-
-CREATE STREAM SOME_JSON_AS_AVRO 
-  WITH (VALUE_FORMAT='AVRO') AS 
-    SELECT * FROM SOME_JSON;
-
-CREATE STREAM SOME_CSV (ID INT, ARTIST VARCHAR, SONG VARCHAR) 
-  WITH (KAFKA_TOPIC='some_csv_data', VALUE_FORMAT='DELIMITED');
-
-INSERT INTO SOME_JSON_AS_AVRO SELECT * FROM SOME_CSV;
-----
-
-10. Create a sink for the reserialized data
-+
-[source,bash]
-----
-curl -X PUT http://localhost:8083/connectors/sink-jdbc-mysql-02-avro/config \
-     -H "Content-Type: application/json" -d '{
-    "connector.class"                    : "io.confluent.connect.jdbc.JdbcSinkConnector",
-    "connection.url"                     : "jdbc:mysql://mysql:3306/demo",
-    "topics"                             : "SOME_JSON_AS_AVRO",
-    "key.converter"                      : "org.apache.kafka.connect.storage.StringConverter",
-    "value.converter"                    : "io.confluent.connect.avro.AvroConverter",
-    "value.converter.schema.registry.url": "http://schema-registry:8081",
-    "connection.user"                    : "connect_user",
-    "connection.password"                : "asgard",
-    "auto.create"                        : true,
-    "auto.evolve"                        : true,
-    "insert.mode"                        : "insert"
-}'
-----
 
 '''
 
