@@ -1,5 +1,6 @@
-#!/bin/bash
-read -p "Commit message: " desc
-git add . 
-git commit -m "$desc" 
+@echo off
+git add .
+set /p msg="Introduce el mensaje del commit: "
+rem echo "%msg%"
+git commit -m "%msg%"
 git push
