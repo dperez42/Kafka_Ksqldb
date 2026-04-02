@@ -311,26 +311,26 @@ Things to customize for your environment:
 
 `transforms` : use transforms to add or delete columns
 
-4. Create the Source connectors.
+5. Create the Source connectors.
 + 
 From a CDC sql server 
 +
 [source,sql]
 ----
 CREATE SINK CONNECTOR IF NOT EXISTS "mysql-upsertA-sink"  WITH (
-  "database.encrypt": "false",
-  "schema.history.internal.kafka.bootstrap.servers": "br-1:9092",
-  "schema.history.internal.kafka.topic": "schema-changes.AGP_UCA_BoardingPassData",
-  "connector.class": "io.debezium.connector.sqlserver.SqlServerConnector",
-  "tasks.max": "1",
-  "topic.prefix": "AGP_UCA_BoardingPassData",
-  "database.names": "RealTimeStatsCollectionDB",
-  "database.hostname": "xxx.xxx.xxx.xxx",
-  "database.port": "1433",
-  "database.user": "user",
-  "database.password": "************************************",
-  "snapshot.mode": "schema_only",
-  "table.include.list": "dbo.BoardingPassData"
+  "database.encrypt"= 'false',
+  "schema.history.internal.kafka.bootstrap.servers"= 'br-1:9092',
+  "schema.history.internal.kafka.topic"= 'schema-changes.AGP_UCA_BoardingPassData',
+  "connector.class"= 'io.debezium.connector.sqlserver.SqlServerConnector',
+  "tasks.max"= '1',
+  "topic.prefix"= 'AGP_UCA_BoardingPassData',
+  "database.names"= 'RealTimeStatsCollectionDB',
+  "database.hostname"= 'xxx.xxx.xxx.xxx',
+  "database.port"= '1433',
+  "database.user"= 'user',
+  "database.password"= '************************************',
+  "snapshot.mode"= 'schema_only',
+  "table.include.list"= 'dbo.BoardingPassData'
 );
 ----
 +
@@ -341,11 +341,15 @@ CREATE STREAM STREAM_AGP_BOARDING WITH ( KAFKA_TOPIC='AGP_UCA_BoardingPassData.R
 +
 Podemos crearlos con format json por ejemplo:
 +
+[source,sql]
+----
 CREATE STREAM students_stream (id VARCHAR, name VARCHAR, address VARCHAR, city VARCHAR) WITH (kafka_topic='students', value_format='JSON');
+----
 +
 Importante el stream creado en ksql no interacciona con el original, se le puede definir el formato de salida (avro, json,etc)
 +
 Ejemplos
+
   ROWKEY ROWKEY,
   BRFL.AFTER->BOARDINGPASSID BOARDINGPASSID,
   BD.AFTER->ID ID_BOARD,
