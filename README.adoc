@@ -145,7 +145,7 @@ rowtime: 2026/04/02 16:24:11.194 Z, key: 2, value: {"ID": 2, "NAME": "sensor 2",
 Topic printing ceased
 ----
 
-Try with a new incoming readind.
+Try with a new incoming reading from sensor 2.
 
 [source,sql]
 ---
@@ -166,8 +166,21 @@ rowtime: 2026/04/02 16:24:11.194 Z, key: 2, value: {"ID": 2, "NAME": "sensor 2",
 rowtime: 2026/04/02 17:09:22.582 Z, key: 2, value: {"ID": 2, "NAME": "sensor 2", "VALUE": 9999}, partition: 0
 ----
 
+3. Create the Sink connectors.
 
-3. Create the Sink connectors
+We ara going to create two sinks connections to mysql:
++
+* insert : insert all the readings in a table.
+* upsert : update the last reading of each sensor.
++
+
+
+
+
+
+
+
+
 +
 [source,javascript]
 ----
