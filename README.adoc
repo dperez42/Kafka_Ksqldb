@@ -12,16 +12,12 @@ docker-compose up -d
 [source,bash]
 ----
 ➜ docker-compose ps
-     Name                    Command                  State                     Ports
----------------------------------------------------------------------------------------------------
-broker            /etc/confluent/docker/run        Up             0.0.0.0:9092->9092/tcp
-kafka-connect     bash -c cd /usr/share/conf ...   Up (healthy)   0.0.0.0:8083->8083/tcp, 9092/tcp
-kafkacat          /bin/sh -c apk add jq;           Up
-                  wh ...
-ksqldb            /usr/bin/docker/run              Up             0.0.0.0:8088->8088/tcp
-mysql             docker-entrypoint.sh mysqld      Up             0.0.0.0:3306->3306/tcp, 33060/tcp
-schema-registry   /etc/confluent/docker/run        Up             0.0.0.0:8081->8081/tcp
-zookeeper         /etc/confluent/docker/run        Up             2181/tcp, 2888/tcp, 3888/tcp
+CONTAINER ID   IMAGE                                   COMMAND                  CREATED        STATUS       PORTS                                             NAMES
+8dbb411756e8   confluentinc/ksqldb-cli:0.29.0          "/bin/sh"                10 hours ago6746746743f042bdde   c66743f042bdde   confluentinc/cp-kafka:latest            "/etc/confluent/dock…"   10 hours ago   Up 4 hours   0.0.0.0:29092->29092/tcp, [::]:29092->29092/tcp   kafka-broker
+0838a81d010b   phpmyadmin                              "/docker-entrypoint.…"   10 hours ago   Up 4 hours   0.0.0.0:8082->80/tcp, [::]:8082->80/tcp           simple_kafka-phpmyadmin-1
+65cfbe8ef6ae   confluentinc/cp-zookeeper:latest        "/etc/confluent/dock…"   10 hours ago   Up 4 hours   0.0.0.0:2181->2181/tcp, [::]:2181->2181/tcp       zookeeper
+18ae21041828   provectuslabs/kafka-ui                  "/bin/sh -c 'java --…"   10 hours ago   Up 4 hours   0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp       kafka-ui
+e3c92a44d09e   simple_kafka-mysql                      "docker-entrypoint.s…"   10 hours ago   Up 4 hours   0.0.0.0:3306->3306/tcp, [::]:3306->3306/tcp       simple_kafka-mysql-1
 ----
 
 3. Create test topics + data using ksqlDB (but it's still just a Kafka topic under the covers)
@@ -248,9 +244,8 @@ CREATE SINK CONNECTOR IF NOT EXISTS "mysql-upsertA-sink"  WITH (
 NOTE:
 - Name of columns are case sensitive. 
 
-+
 Things to customise for your environment:
-+
+
 `topics` :  the source topic(s) you want to send
 
 `key.converter` : match the serialisation of your source data (see https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/[here])
@@ -264,7 +259,7 @@ Things to customise for your environment:
 `pk.fields` : columns (could be various) to use as index. Is case sensitive!.
 
 `transforms` : use transforms to add or delete columns
-+
+
 
 '''
 
