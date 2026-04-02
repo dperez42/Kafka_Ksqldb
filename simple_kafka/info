@@ -111,6 +111,27 @@ AS SELECT
 PRINT 'T1_T2_T3' FROM BEGINNING;
 -- save in the database
 
+-- testing upserts with index in a column of value
+CREATE STREAM TEST02 (KEY_COL INT KEY, COL1 INT, COL2 VARCHAR)
+    WITH (KAFKA_TOPIC='test02', PARTITIONS=1, VALUE_FORMAT='AVRO');
+
+Nota: KEY_COL VARCHAR KEY --> DA VALOR AL KEY
+
+INSERT INTO TEST02 (KEY_COL, COL1, COL2) VALUES (1,1,'FOO');
+INSERT INTO TEST02 (KEY_COL, COL1, COL2) VALUES (2,2,'BAR');
+
+SHOW TOPICS;
+PRINT test02 FROM BEGINNING LIMIT 2;
+
+Key format: KAFKA_STRING
+Value format: AVRO or KAFKA_STRING
+rowtime: 2026/04/02 10:05:16.179 Z, key: X, value: {"COL1": 1, "COL2": "FOO"}, partition: 0
+rowtime: 2026/04/02 10:05:24.243 Z, key: Y, value: {"COL1": 2, "COL2": "BAR"}, partition: 0
+Topic printing ceased
+
+INSERT INTO TEST02 (COL1, COL2) VALUES (2,'BARRO');
+
+
 DROP STREAM STREAM_TEST;
 ----------------------------------------------------------------------------
 CONNECTORS (SOURCE,SINKS):
@@ -133,20 +154,28 @@ CREATE SOURCE CONNECTOR IF NOT EXISTS "AGP_UCA_BoardingPassData-source-connector
     "schema.history.internal.kafka.topic": "schema-changes.AGP_UCA_BoardingPassData"
 );
 
-CREATE SINK CONNECTOR IF NOT EXISTS "mysql-insert-sink"  WITH (
+CREATE SINK CONNECTOR IF NOT EXISTS "mysql-upsert-sink"  WITH (
     "task.max"='1',
     "connection.url"= 'jdbc:mysql://mysql:3306/temp_db',
     "connection.user"= 'myuser',
     "connection.password"= 'mypassword',
-    "topics"= 'T1_T2',
+    "topics"= 'test02',
     "connector.class"= 'io.confluent.connect.jdbc.JdbcSinkConnector',
     "key.converter"='org.apache.kafka.connect.storage.StringConverter',
     "value.converter"='io.confluent.connect.avro.AvroConverter',
     "value.converter.schema.registry.url"='http://schema-registry:8081',
-    "table.name.format"= 'kafka_${topic}',
+    "table.name.format"= 'kafka_upsert_${topic}',
     "auto.create"= 'true',
     "auto.evolve"= 'true',
-    "insert.mode"= 'insert'
+    "insert.mode"= 'upsert',
+    "pk.mode"='record_value',
+    "pk.fields"='COL1', 
+    "transforms"= 'dropSome,addSome',
+    "transforms.dropSome.type"='org.apache.kafka.connect.transforms.ReplaceField$Value',
+    --"transforms.dropSome.blacklist"= 'COL2',
+    "transforms.addSome.type"='org.apache.kafka.connect.transforms.InsertField$Value',
+    "transforms.addSome.partition.field"= '_partition',
+    "transforms.addSome.timestamp.field"= 'RECORD_TS'
 );
 
 
@@ -158,5 +187,5 @@ CREATE SINK CONNECTOR IF NOT EXISTS "mysql-insert-sink"  WITH (
 
 "pk.fields"='id_col_primary_key' (nombre de la columna key)
 
-Si usas el pk.mode = record.value podrás poner pk.mode una columna
-Si usas el pk.mode = record.key podrás poner pk.fields = 'MESSAGE_KEY'
+Si usas el pk.mode = record.value podrás poner pk.mode una columna o varias "pk.fields"='COL1',
+Si usas el pk.mode = record.key podrás poner pk.fields = 'MESSAGE_KEY' !!erroor blob
