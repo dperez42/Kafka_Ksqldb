@@ -73,7 +73,7 @@ Enter in KSQLDB CLI
 docker exec -it ksqldb-server ksql http://ksqldb:8088
 ----
 Or you can enter in the container via docker desktop and type "ksql"
-
++
 First Stream
 +
 [source,sql]
