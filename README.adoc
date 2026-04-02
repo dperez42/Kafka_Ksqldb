@@ -87,7 +87,7 @@ rowtime: 2026/04/02 16:24:11.194 Z, key: Y, value: {"ID_SENSOR": 2, "VALUE": 200
 Topic printing ceased
 ----
 
-2. Now a topic joinning de readings with dim_sensors:
+Now a topic joinning de readings with dim_sensors:
 
 First, make a test:
 
@@ -144,6 +144,28 @@ rowtime: 2026/04/02 16:24:11.151 Z, key: 1, value: {"ID": 1, "NAME": "sensor 1",
 rowtime: 2026/04/02 16:24:11.194 Z, key: 2, value: {"ID": 2, "NAME": "sensor 2", "VALUE": 2000}, partition: 0
 Topic printing ceased
 ----
+
+Try with a new incoming readind.
+
+[source,sql]
+---
+INSERT INTO readings (KEY_COL, id_sensor, value) VALUES ('4',2,9999);
+----
+
+[source,sql]
+----
+PRINT reading_enrich FROM BEGINNING LIMIT 10;
+----
+
+[source,sql]
+----
+Key format: KAFKA_INT or KAFKA_STRING
+Value format: AVRO
+rowtime: 2026/04/02 16:24:11.151 Z, key: 1, value: {"ID": 1, "NAME": "sensor 1", "VALUE": 1100}, partition: 0
+rowtime: 2026/04/02 16:24:11.194 Z, key: 2, value: {"ID": 2, "NAME": "sensor 2", "VALUE": 2000}, partition: 0
+rowtime: 2026/04/02 17:09:22.582 Z, key: 2, value: {"ID": 2, "NAME": "sensor 2", "VALUE": 9999}, partition: 0
+----
+
 
 3. Create the Sink connectors
 +
