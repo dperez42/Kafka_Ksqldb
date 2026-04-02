@@ -24,8 +24,8 @@ schema-registry   /etc/confluent/docker/run        Up             0.0.0.0:8081->
 zookeeper         /etc/confluent/docker/run        Up             2181/tcp, 2888/tcp, 3888/tcp
 ----
 
-3. Create test topic + data using ksqlDB (but it's still just a Kafka topic under the covers)
-+
+3. Create test topics + data using ksqlDB (but it's still just a Kafka topic under the covers)
+
 [source,bash]
 ----
 docker exec -it ksqldb ksql http://ksqldb:8088
@@ -48,6 +48,7 @@ INSERT INTO dim_sensores (KEY_COL, id_sensor, nombre_sensor) VALUES ('Y',2,'sens
 SHOW TOPICS;
 PRINT dim_sensores FROM BEGINNING LIMIT 2;
 ----
++
 [source,sql]
 ----
 Key format: KAFKA_STRING
@@ -56,6 +57,38 @@ rowtime: 2026/04/02 16:16:35.392 Z, key: X, value: {"ID_SENSOR": 1, "NOMBRE_SENS
 rowtime: 2026/04/02 16:16:35.441 Z, key: Y, value: {"ID_SENSOR": 2, "NOMBRE_SENSOR": "sensor 2"}, partition: 0
 Topic printing ceased
 ----
+
+Now topic of measurements:
+
+[source,sql]
+----
+CREATE STREAM readings (KEY_COL VARCHAR KEY, id_sensor INT, value INT)
+  WITH (KAFKA_TOPIC='readings', PARTITIONS=1, VALUE_FORMAT='AVRO');
+----
++
+[source,sql]
+----
+INSERT INTO readings (KEY_COL, id_sensor, value) VALUES ('X',1,1100);
+INSERT INTO readings (KEY_COL, id_sensor, value) VALUES ('Y',2,2000);
+----
++
+[source,sql]
+----
+SHOW TOPICS;
+PRINT readings FROM BEGINNING LIMIT 2;
+----
++
+[source,sql]
+----
+Key format: KAFKA_STRING
+Value format: AVRO
+rowtime: 2026/04/02 16:24:11.151 Z, key: X, value: {"ID_SENSOR": 1, "VALUE": 1100}, partition: 0
+rowtime: 2026/04/02 16:24:11.194 Z, key: Y, value: {"ID_SENSOR": 2, "VALUE": 2000}, partition: 0
+Topic printing ceased
+----
+
+
+
 3. Create the Sink connector
 +
 [source,javascript]
