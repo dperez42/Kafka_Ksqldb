@@ -39,16 +39,23 @@ CREATE STREAM dim_sensores (KEY_COL VARCHAR KEY, id_sensor INT, nombre_sensor VA
 +
 [source,sql]
 ----
-INSERT INTO TEST01 (KEY_COL, COL1, COL2) VALUES ('X',1,'FOO');
-INSERT INTO TEST01 (KEY_COL, COL1, COL2) VALUES ('Y',2,'BAR');
+INSERT INTO dim_sensores (KEY_COL, id_sensor, nombre_sensor) VALUES ('X',1,'sensor 1');
+INSERT INTO dim_sensores (KEY_COL, id_sensor, nombre_sensor) VALUES ('Y',2,'sensor 2');
 ----
 +
 [source,sql]
 ----
 SHOW TOPICS;
-PRINT test01 FROM BEGINNING LIMIT 2;
+PRINT dim_sensores FROM BEGINNING LIMIT 2;
 ----
-
+[source,sql]
+----
+Key format: KAFKA_STRING
+Value format: AVRO or KAFKA_STRING
+rowtime: 2026/04/02 16:16:35.392 Z, key: X, value: {"ID_SENSOR": 1, "NOMBRE_SENSOR": "sensor 1"}, partition: 0
+rowtime: 2026/04/02 16:16:35.441 Z, key: Y, value: {"ID_SENSOR": 2, "NOMBRE_SENSOR": "sensor 2"}, partition: 0
+Topic printing ceased
+----
 3. Create the Sink connector
 +
 [source,javascript]
