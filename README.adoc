@@ -251,13 +251,19 @@ NOTE:
 +
 Things to customise for your environment:
 +
-* `topics` :  the source topic(s) you want to send
-* `key.converter` : match the serialisation of your source data (see https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/[here])
-* `value.converter` : match the serialisation of your source data (see https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/[here])
-* `insert.mode` : insert or upsert.
-* `pk.mode` : record_value (use the value) or record_key (use the key)
-* `pk.fields` : columns (could be various) to use as index. Is case sensitive!.
-* `transforms` : use transforms to add or delete columns
+`topics` :  the source topic(s) you want to send
+
+`key.converter` : match the serialisation of your source data (see https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/[here])
+
+`value.converter` : match the serialisation of your source data (see https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained/[here])
+
+`insert.mode` : insert or upsert.
+
+`pk.mode` : record_value (use the value) or record_key (use the key)
+
+`pk.fields` : columns (could be various) to use as index. Is case sensitive!.
+
+`transforms` : use transforms to add or delete columns
 +
 
 '''
