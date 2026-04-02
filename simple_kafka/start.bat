@@ -1,14 +1,9 @@
 @echo off
-echo [32mwait until ksqldb ready...
-
+echo wait until ksqldb ready...
 rem build and deply
 docker compose up -d --build
-
 setlocal enabledelayedexpansion
-
 rem wait until kafka server is ready
-
-
 rem wait until ksqldb is ready
 for /l %%i in (1,1,90) do (
     set "status="
@@ -32,7 +27,6 @@ for /l %%i in (1,1,90) do (
     timeout /t 2 > nul
 )
 echo wait until topics ready...
-
 :end 
 rem Init ksqldb
 echo wait until topics ready...
